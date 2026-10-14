@@ -286,6 +286,15 @@ export function createAccountRouter(deps: Dependencies): Router {
     if (!current) return;
     const review = requireOwnedReview(db, req, res);
     if (!review) return;
+    if (current.user.id !== review.user_id) {
+      sendErrorPage(
+      res,
+      404,
+      "Review Not Found",
+      "We couldn't find that review.",
+    );
+    return;
+  }
     res
       .type("html")
       .send(
@@ -311,6 +320,16 @@ export function createAccountRouter(deps: Dependencies): Router {
     }
     const review = requireOwnedReview(db, req, res);
     if (!review) return;
+    if (current.user.id !== review.user_id) {
+      sendErrorPage(
+      res,
+      404,
+      "Review Not Found",
+      "We couldn't find that review.",
+    );
+    return;
+  }
+    
     const rating = Number(req.body.rating);
     const body = parseReviewBody(req.body.body);
     if (
@@ -350,9 +369,18 @@ export function createAccountRouter(deps: Dependencies): Router {
     }
     const review = requireOwnedReview(db, req, res);
     if (!review) return;
-    deleteReview(db, review.id);
-    res.redirect("/account/reviews");
-  });
+    if (current.user.id !== review.user_id) {
+      sendErrorPage(
+      res,
+      404,
+      "Review Not Found",
+      "We couldn't find that review.",
+    );
+    return;
+  }
+  deleteReview(db, review.id);
+  res.redirect("/account/reviews");
+});
 
   return router;
 }
