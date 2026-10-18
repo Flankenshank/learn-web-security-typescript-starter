@@ -26,22 +26,27 @@ export function createApiRouter(deps: Dependencies): Router {
 
   router.get("/api/orders/:id", (req, res) => {
     const current = getCurrentSession(db, req.header("cookie"));
+    const orderId = Number(req.params.id);
+    const order = findOrderById(db, orderId);
     if (!current) {
       res.status(401).json({ error: "Authentication required" });
       return;
     }
 
-    const orderId = Number(req.params.id);
     if (!Number.isSafeInteger(orderId)) {
       res.status(404).json({ error: "Order not found" });
       return;
     }
 
-    const order = findOrderById(db, orderId);
     if (!order) {
       res.status(404).json({ error: "Order not found" });
       return;
     }
+
+    if (order.user_id !== current.user.id) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
 
     res.json({ order, items: listOrderItems(db, order.id) });
   });
@@ -74,6 +79,6 @@ export function createApiRouter(deps: Dependencies): Router {
       orders,
     });
   });
-
+  
   return router;
 }
