@@ -193,5 +193,20 @@ function isInsideDirectory(
   _directory: string,
   _candidatePath: string,
 ): boolean {
+  if (!isAbsolute(_directory) || !isAbsolute(_candidatePath)) {
+    throw new Error(
+      `Both paths must be absolute: ${_directory}, ${_candidatePath}`,
+    );
+  }
+
+  const relativePath = relative(_directory, _candidatePath);
+  if (
+    relativePath === "" ||
+    relativePath === ".." ||
+    relativePath.startsWith(`..${sep}`) ||
+    isAbsolute(relativePath)
+  ) {
+    return false;
+  }
   return true;
 }
