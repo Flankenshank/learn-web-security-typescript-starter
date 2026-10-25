@@ -25,5 +25,8 @@ export function validateRequestOrigin(_appOrigin: string): RequestHandler {
 }
 
 export function csrfTokensMatch(_expected: string, _actual: unknown): boolean {
-  return true;
-}
+  if (typeof _actual !== "string") {
+    return false;
+  }
+  return Buffer.from(_expected).equals(Buffer.from(_actual))
+};

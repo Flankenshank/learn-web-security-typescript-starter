@@ -22,6 +22,7 @@ import {
   findOrderById,
   InsufficientInventoryError,
 } from "../orders/index.ts";
+import { csrfTokensMatch } from "../csrf.ts";
 
 export function sendFulfillmentTimeout(
   response: Response,
@@ -79,6 +80,9 @@ export function createCheckoutRouter(deps: Dependencies): Router {
     const current = requireAuth(db, req, res);
     if (!current) {
       return;
+    }
+    if (!csrfTokensMatch(current.session.csrf_token, req.body?.csrf_token)) {
+      return sendErrorPage(res, 403, "Forbidden", "Invalid CSRF token.");
     }
 
     let items = listCartItems(db, current.user.id);
