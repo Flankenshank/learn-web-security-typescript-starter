@@ -55,6 +55,7 @@ export function createApp(deps: Dependencies): express.Express {
     res.set("X-Content-Type-Options", "nosniff");
     res.set("Content-Security-Policy", `default-src 'self'; script-src 'self' ${cspNonceHeader}; style-src 'self'; img-src 'self' data:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'`);
     res.set("X-Frame-Options", "SAMEORIGIN");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
     next();
   });
 
