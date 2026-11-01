@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import express, { type RequestHandler } from "express";
+import express from "express";
 import { validateRequestOrigin } from "./csrf.ts";
 import type { Dependencies } from "./dependencies.ts";
 import { errorHandler, sendErrorPage } from "./errors.ts";
@@ -20,42 +20,39 @@ import { createProductsRouter } from "./routes/products.ts";
 import { createStorefrontRouter } from "./routes/storefront.ts";
 import { createSupportRouter } from "./routes/support.ts";
 import { migrateSensitiveDataAtRest } from "./storage/migrations.ts";
-
-const apiCors: RequestHandler = (req, res, next) => {
-  const origin = req.header("Origin");
-
-  if (origin) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-  }
-
-  res.setHeader("Vary", "Origin");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-  );
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-  if (req.method === "OPTIONS") {
-    res.sendStatus(204);
-    return;
-  }
-
-  next();
-};
+import cors from "cors";
+import helmet from "helmet";
+import type { Response } from "express";
 
 export function createApp(deps: Dependencies): express.Express {
   migrateSensitiveDataAtRest(deps.db, deps.keyring);
   const app = express();
 
   app.use((_req, res, next) => {
-    const cspNonce = randomBytes(16).toString("base64");
-    const cspNonceHeader = `'nonce-${cspNonce}'`;
-    res.locals.cspNonce = cspNonce;
-    res.set("X-Content-Type-Options", "nosniff");
-    res.set("Content-Security-Policy", `default-src 'self'; script-src 'self' ${cspNonceHeader}; style-src 'self'; img-src 'self' data:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'`);
-    res.set("X-Frame-Options", "SAMEORIGIN");
-    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  const nonce = randomBytes(16).toString("base64");
+  res.locals.cspNonce = nonce;
+  next();
+});
+
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          scriptSrc: ["'self'", (_req, res) => `'nonce-${String((res as Response).locals.cspNonce)}'`],
+          styleSrc: ["'self'"],
+          frameSrc: ["'self'"],
+          upgradeInsecureRequests: null,
+        },
+      },
+      referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+      xFrameOptions: { action: "sameorigin" },
+      strictTransportSecurity: false,
+    }),
+  );
+  app.use((req, res, next) => {
+    if (req.path === "/shipping-widget.css" || req.path === "/shipping-widget.js") {
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    }
     next();
   });
 
@@ -67,18 +64,19 @@ export function createApp(deps: Dependencies): express.Express {
     "/vendor/simplewebauthn",
     express.static("node_modules/@simplewebauthn/browser/dist/bundle"),
   );
-
+  app.use("/api/products",
+    cors({
+      origin: "*", credentials: false, methods: ["GET"], allowedHeaders: []
+    }),
+  );
   app.use(express.urlencoded({ extended: false }));
   app.use(express.json());
   app.use(createPawPalRouter(deps));
   app.use(validateRequestOrigin(deps.appOrigin));
-  app.use("/api", apiCors);
   app.use(createApiRouter(deps));
-
   app.use(createArchiveRouter(deps));
   app.use(createAssistantRouter(deps));
   app.use(createImagePreviewRouter(deps));
-
   app.use(createAuthRouter(deps));
   app.use(createPasskeyRouter(deps));
   app.use(createAccountRouter(deps));
