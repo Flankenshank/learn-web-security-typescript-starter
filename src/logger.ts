@@ -7,6 +7,7 @@ const logPath = join(process.cwd(), "data", "bearly-secure.log");
 
 export function logEvent(eventName: string, fields: LogFields = {}): void {
   mkdirSync(dirname(logPath), { recursive: true });
+  fields = redact(fields);
 
   appendFileSync(
     logPath,
@@ -17,3 +18,8 @@ export function logEvent(eventName: string, fields: LogFields = {}): void {
     })}\n`,
   );
 }
+
+function redact(fields: LogFields): LogFields {
+  return { ...fields, sessionId: "[REDACTED]", resetToken: "[REDACTED]", resetLink: "[REDACTED]", secret: "[REDACTED]",
+    adminNotes: "[REDACTED]", storagePath: "[REDACTED]" }
+   };
