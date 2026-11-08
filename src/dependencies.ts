@@ -15,7 +15,16 @@ export type Dependencies = {
   downloadSigningKey: Buffer;
   keyring: Keyring | undefined;
   db: DatabaseSync;
+  pawPalApiKey: string;
 };
+
+function readEnvVar(env: NodeJS.ProcessEnv, name: string, defaultValue?: string): string {
+  const value = env[name] ?? defaultValue;
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
 
 function parseNonNegativeInteger(value: string, name: string): number {
   const parsed = Number(value);
@@ -52,6 +61,7 @@ export function initDependencies(
     maxPublicProductResults: 50,
     downloadSigningKey: randomBytes(32),
     keyring: loadOptionalKeyring(env),
+    pawPalApiKey: readEnvVar(env, "PAWPAL_API_KEY"),
   };
 
   return { ...values, db: openDatabase(values.databasePath) };
